@@ -433,6 +433,45 @@
             return Array.from(tagSet).sort();
         }
 
+        // 全曲のフラットリスト取得（名前順: 数字 → 英語 → 日本語）
+        function getAllSongsSorted() {
+            const allSongs = [];
+            Object.keys(rawMusicData).forEach(catName => {
+                rawMusicData[catName].forEach(song => {
+                    allSongs.push({
+                        ...song,
+                        category: catName
+                    });
+                });
+            });
+
+            // 名前順（数字 → アルファベット → 50音）でソート
+            allSongs.sort((a, b) => {
+                const charA = a.title.trim()[0] || '';
+                const charB = b.title.trim()[0] || '';
+                
+                const getGroup = (ch) => {
+                    if (/[0-9]/.test(ch)) return 1;
+                    if (/[a-zA-Z]/.test(ch)) return 2;
+                    return 3; // 日本語（ひらがな・カタカナ・漢字等）
+                };
+
+                const groupA = getGroup(charA);
+                const groupB = getGroup(charB);
+
+                if (groupA !== groupB) {
+                    return groupA - groupB;
+                }
+
+                // 同グループ内は localeCompare で比較（曲名が同名の場合はカテゴリ名順）
+                const titleCmp = a.title.localeCompare(b.title, 'ja', { numeric: true });
+                if (titleCmp !== 0) return titleCmp;
+                return a.category.localeCompare(b.category, 'ja');
+            });
+
+            return allSongs;
+        }
+
         // タグ候補ドロップダウンの更新・表示制御
         function updateTagDropdown() {
             const inputVal = searchInput.value;
@@ -675,73 +714,35 @@
 
             const query = searchQuery.trim().toLowerCase();
 
-            // 「すべて表示」の場合、カテゴリごとにセクション化して表示
+            // 表示対象データの準備
+            let targetSongs = [];
             if (currentTab === "ALL") {
-                let sectionsHtml = '';
-
-                Object.keys(rawMusicData).forEach(catName => {
-                    const songsList = rawMusicData[catName];
-                    const meta = categoryMeta[catName];
-
-                    // 検索＋タグフィルタリング
-                    const filteredSongs = songsList.filter(song => isSongMatching(song, query));
-
-                    if (filteredSongs.length > 0) {
-                        totalMatchCount += filteredSongs.length;
-
-                        const cardsHtml = filteredSongs.map((song, idx) => 
-                            createSongCardHtml(song, catName, idx)
-                        ).join('');
-
-                        const layoutClass = viewMode === 'grid' 
-                            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4' 
-                            : 'space-y-2';
-
-                        sectionsHtml += `
-                            <section class="mb-10">
-                                <div class="flex items-center gap-2.5 mb-4 pb-2 border-b border-slate-200">
-                                    <div class="w-8 h-8 rounded-lg ${meta.tagBg} flex items-center justify-center text-sm shadow-sm">
-                                        <i class="${meta.icon}"></i>
-                                    </div>
-                                    <h2 class="text-lg font-bold text-slate-800">
-                                        ${catName}
-                                    </h2>
-                                    <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-en font-semibold">
-                                        ${filteredSongs.length}
-                                    </span>
-                                </div>
-                                <div class="${layoutClass}">
-                                    ${cardsHtml}
-                                </div>
-                            </section>
-                        `;
-                    }
-                });
-
-                songsContainer.innerHTML = sectionsHtml;
-
+                // 「すべて表示」の場合は全曲を名前順で1つのリストにまとめる
+                targetSongs = getAllSongsSorted();
             } else {
-                // 特定カテゴリのみ表示
+                // 個別カテゴリの場合は該当カテゴリの曲のみ
                 const songsList = rawMusicData[currentTab] || [];
-                const filteredSongs = songsList.filter(song => isSongMatching(song, query));
+                targetSongs = songsList.map(song => ({ ...song, category: currentTab }));
+            }
 
-                totalMatchCount = filteredSongs.length;
+            // 検索＋タグフィルタリング実行
+            const filteredSongs = targetSongs.filter(song => isSongMatching(song, query));
+            totalMatchCount = filteredSongs.length;
 
-                if (filteredSongs.length > 0) {
-                    const cardsHtml = filteredSongs.map((song, idx) => 
-                        createSongCardHtml(song, currentTab, idx)
-                    ).join('');
+            if (filteredSongs.length > 0) {
+                const cardsHtml = filteredSongs.map((song, idx) => 
+                    createSongCardHtml(song, song.category, idx)
+                ).join('');
 
-                    const layoutClass = viewMode === 'grid' 
-                        ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4' 
-                        : 'space-y-2';
+                const layoutClass = viewMode === 'grid' 
+                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4' 
+                    : 'space-y-2';
 
-                    songsContainer.innerHTML = `
-                        <div class="${layoutClass}">
-                            ${cardsHtml}
-                        </div>
-                    `;
-                }
+                songsContainer.innerHTML = `
+                    <div class="${layoutClass}">
+                        ${cardsHtml}
+                    </div>
+                `;
             }
 
             // 件数更新 & 0件時表示制御
