@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吹奏楽譜 カテゴリ別楽曲ライブラリ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                        en: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            900: '#0f172a',
+                        },
+                        accent: {
+                            gold: '#d97706',
+                            emerald: '#059669',
+                            purple: '#7c3aed',
+                            rose: '#e11d48',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+        }
+
+        .tab-btn {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-btn.active {
+            background-color: #1e40af;
+            color: #ffffff;
+            box-shadow: 0 10px 15px -3px rgba(30, 64, 175, 0.3), 0 4px 6px -2px rgba(30, 64, 175, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .song-card {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .song-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.35s ease-in-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* カスタムスクロールバー */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+    <header class="bg-gradient-to-r from-slate-900 via-brand-900 to-indigo-950 text-white shadow-xl relative overflow-hidden">
+        <!-- バックグラウンド装飾音符 -->
+        <div class="absolute -right-10 -bottom-10 opacity-10 text-white pointer-events-none text-9xl font-bold">
+            <i class="fa-solid font-music fa-music"></i>
+        </div>
+        <div class="absolute left-1/3 -top-12 opacity-5 text-white pointer-events-none text-8xl">
+            <i class="fa-solid fa-clef"></i>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 relative z-10">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                    <div class="inline-flex items-center gap-2 bg-blue-500/20 border border-blue-400/30 px-3 py-1 rounded-full text-xs font-medium text-blue-200 mb-3 backdrop-blur-sm">
+                        <i class="fa-solid fa-guitar text-yellow-400"></i> Wind Band Sheet Music Catalog
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white font-sans">
+                        吹奏楽譜 カテゴリ別楽曲ライブラリ
+                    </h1>
+                    <p class="mt-2 text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed">
+                        スマートスコアからWindsScore各大編成まで、バンドの編成や用途に合わせた楽譜一覧を簡単に検索・閲覧できます。
+                    </p>
+                </div>
+
+                <!-- 統計バッジ -->
+                <div class="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 self-start md:self-auto">
+                    <div class="w-12 h-12 rounded-xl bg-brand-500/30 border border-brand-400/40 flex items-center justify-center text-yellow-300 text-xl font-bold">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-300 block font-medium">総掲載曲数</span>
+                        <span id="total-count-badge" class="text-2xl font-bold text-white font-en">0</span>
+                        <span class="text-xs text-slate-300 ml-1">曲</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- コントロールエリア（タブ ＋ 検索 ＋ 表示切替） -->
+        <div class="space-y-6 mb-8">
+            
+            <!-- タブナビゲーション（横並び／レスポンシブ） -->
+            <div class="bg-white p-2 sm:p-2.5 rounded-2xl shadow-sm border border-slate-200/80">
+                <nav class="flex flex-wrap md:flex-nowrap gap-1.5 sm:gap-2 overflow-x-auto pb-1 md:pb-0" aria-label="Tabs" id="category-tabs">
+                    <!-- タブボタンはJavaScriptから動的生成（アクセシビリティ・機能性強化のため） -->
+                </nav>
+            </div>
+
+            <!-- サブバー：検索 ＋ 表示モード切替 ＋ 件数表示 -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-100/80 p-3 sm:p-4 rounded-xl border border-slate-200">
+                <!-- 検索入力 -->
+                <div class="relative w-full sm:w-80">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </div>
+                    <input type="text" id="search-input" placeholder="曲名でキーワード検索..." 
+                        class="w-full pl-10 pr-9 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all">
+                    <button id="clear-search" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-circle-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
+                    <!-- 現在表示中の件数 -->
+                    <div class="text-xs sm:text-sm text-slate-600 font-medium">
+                        表示中: <span id="displayed-count" class="font-bold text-brand-700 font-en text-base">0</span> 件
+                    </div>
+
+                    <!-- 表示グリッド/リスト切替 -->
+                    <div class="flex items-center bg-white rounded-lg p-1 border border-slate-300 shadow-sm">
+                        <button id="view-grid-btn" title="グリッド表示" class="p-1.5 rounded text-slate-700 hover:bg-slate-100 active-view-btn transition-colors">
+                            <i class="fa-solid fa-border-all text-sm w-4 h-4 flex items-center justify-center"></i>
+                        </button>
+                        <button id="view-list-btn" title="リスト表示" class="p-1.5 rounded text-slate-400 hover:bg-slate-100 transition-colors">
+                            <i class="fa-solid fa-list text-sm w-4 h-4 flex items-center justify-center"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 曲リスト表示エリア -->
+        <div id="songs-container" class="min-h-[300px]">
+            <!-- JSで動的に構築されます -->
+        </div>
+
+        <!-- 検索結果0件時の表示 -->
+        <div id="no-results" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 p-8">
+            <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fa-solid fa-music-slash"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700 mb-1">該当する楽曲が見つかりません</h3>
+            <p class="text-sm text-slate-500 max-w-md mx-auto">
+                検索キーワードを変更するか、別のカテゴリタブを選択してみてください。
+            </p>
+            <button id="reset-filter-btn" class="mt-4 px-4 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold rounded-lg transition-colors">
+                検索条件をリセット
+            </button>
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 mt-12 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-compact-disc text-brand-600"></i>
+                <span class="font-semibold text-slate-700">吹奏楽譜 ライブラリ カタログ</span>
+            </div>
+            <p>© Wind Band Music Library Catalog. All items retained in designated sorting order.</p>
+        </div>
+    </footer>
+
+    <!-- コピー通知トースト -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-800 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 z-50 pointer-events-none">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+        <span id="toast-message">曲名をコピーしました</span>
+    </div>
+
+    <script>
+        /*
+         * 吹奏楽譜 データセット
+         * ※指定されたソート順（数字 → 英語 → 日本語）を忠実に保持
+         */
+        const rawMusicData = {
+            "スマートスコア": [
+                "365日の紙飛行機",
+                "3月9日",
+                "GUTS!",
+                "U.S.A.",
+                "アイデア",
+                "オーメンズ・オブ・ラブ",
+                "風になりたい",
+                "川の流れのように",
+                "君の瞳に恋してる",
+                "クリスマスソング",
+                "恋人がサンタクロース",
+                "ジブリ・ソングス",
+                "情熱大陸",
+                "シンデレラガール",
+                "星に願いを",
+                "世界はあなたに笑いかけている",
+                "遥か",
+                "ハナミズキ",
+                "ハルノヒ",
+                "パプリカ",
+                "ファミリーアニメ・コレクション",
+                "道",
+                "やっってみよう（ピクニック）",
+                "ヤングマン（Y.M.C.A.）",
+                "リメンバー・ミー"
+            ],
+            "小編成WindsScore": [
+                "愛の花",
+                "アシタカせっ記",
+                "明日はきっといい日になる",
+                "I See the Light（輝く未来）",
+                "宇宙戦艦ヤマト 〜SKA Ver.〜",
+                "オトナブルー",
+                "青と夏",
+                "ケセラセラ",
+                "群青",
+                "新宝島",
+                "SEKAI NO OWARI メドレー",
+                "相思相愛",
+                "東京ブギウギ",
+                "虹",
+                "ひまわりの約束",
+                "フレンド・ライク・ミー",
+                "星影のエール",
+                "僕らまた",
+                "ほおずき行進曲",
+                "マツケンサンバ II",
+                "Mela!",
+                "勇気100%"
+            ],
+            "旧大編成WindsScore": [
+                "Amazing Grace ~around the World~",
+                "Another Day of Sun",
+                "HERO -Main Title-2014",
+                "J-BEST'17 〜2017年J-POPベストヒッツスペシャルメドレー〜",
+                "Make Her Mine -in Swing-",
+                "Paradise Has No Border",
+                "We Are The World",
+                "あまちゃん オープニングテーマ",
+                "ありがとう",
+                "生きてる",
+                "オモイダマ",
+                "Xmas Swingin' コレクション",
+                "恋",
+                "サンカ",
+                "サンシャイン",
+                "じょいふる",
+                "三百六十五歩のマーチ",
+                "生命の奇跡",
+                "ドクターXのテーマ",
+                "夏疾風",
+                "ハピネス",
+                "ひまわり",
+                "平成ドラマ・テーマ・コレクション",
+                "花束を君に",
+                "YELL"
+            ],
+            "新大編成WindsScore": [
+                "Happy Birthday to You",
+                "J-BEST 〜桜ソングメドレー〜",
+                "Make you happy",
+                "Soranji",
+                "愛のしるし",
+                "美しい鰭",
+                "楽器紹介のための小さな世界",
+                "銀河鉄道999",
+                "最高到達点",
+                "残酷な天使のテーゼ",
+                "ジャンボリミッキー！",
+                "昭和アイドル・コレクション",
+                "全力少年",
+                "パプリカ",
+                "平成キッズコーナー",
+                "ヘビーローテーション",
+                "ベテルギウス",
+                "僕のこと",
+                "名探偵コナンメインテーマ"
+            ]
+        };
+
+        // カテゴリごとの配色・アイコン設定
+        const categoryMeta = {
+            "ALL": {
+                name: "すべて表示",
+                icon: "fa-solid fa-border-all",
+                badgeBg: "bg-slate-100 text-slate-700",
+                accentColor: "border-slate-300",
+                tagColor: "bg-slate-100 text-slate-700"
+            },
+            "スマートスコア": {
+                name: "スマートスコア",
+                icon: "fa-solid fa-book-open text-blue-500",
+                badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
+                accentColor: "border-l-blue-500",
+                tagBg: "bg-blue-50 text-blue-700 border-blue-200/60"
+            },
+            "小編成WindsScore": {
+                name: "小編成WindsScore",
+                icon: "fa-solid fa-users text-emerald-500",
+                badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                accentColor: "border-l-emerald-500",
+                tagBg: "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+            },
+            "旧大編成WindsScore": {
+                name: "旧大編成WindsScore",
+                icon: "fa-solid fa-music text-purple-500",
+                badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+                accentColor: "border-l-purple-500",
+                tagBg: "bg-purple-50 text-purple-700 border-purple-200/60"
+            },
+            "新大編成WindsScore": {
+                name: "新大編成WindsScore",
+                icon: "fa-solid fa-award text-amber-500",
+                badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
+                accentColor: "border-l-amber-500",
+                tagBg: "bg-amber-50 text-amber-700 border-amber-200/60"
+            }
+        };
+
+        // アプリケーション状態
+        let currentTab = "ALL";
+        let searchQuery = "";
+        let viewMode = "grid"; // 'grid' | 'list'
+
+        const tabsContainer = document.getElementById('category-tabs');
+        const songsContainer = document.getElementById('songs-container');
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search');
+        const totalCountBadge = document.getElementById('total-count-badge');
+        const displayedCount = document.getElementById('displayed-count');
+        const noResults = document.getElementById('no-results');
+        const resetFilterBtn = document.getElementById('reset-filter-btn');
+        const viewGridBtn = document.getElementById('view-grid-btn');
+        const viewListBtn = document.getElementById('view-list-btn');
+
+        // 総曲数の計算
+        function getTotalSongsCount() {
+            return Object.values(rawMusicData).reduce((acc, list) => acc + list.length, 0);
+        }
+
+        // コピー用トースト通知表示
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.textContent = text;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // クリップボードへコピー
+        function copyToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text);
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (error) {
+                    console.error('Copy failed', error);
+                }
+                document.body.removeChild(textArea);
+            }
+            showToast(`「${text}」をコピーしました`);
+        }
+
+        // タブボタンの初期化・描画
+        function renderTabs() {
+            tabsContainer.innerHTML = '';
+
+            const categories = ["ALL", ...Object.keys(rawMusicData)];
+
+            categories.forEach(catKey => {
+                const meta = categoryMeta[catKey];
+                const count = catKey === "ALL" 
+                    ? getTotalSongsCount() 
+                    : rawMusicData[catKey].length;
+
+                const button = document.createElement('button');
+                button.className = `tab-btn flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl font-medium text-xs sm:text-sm whitespace-nowrap border border-transparent ${catKey === currentTab ? 'active' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-slate-200/60'}`;
+                
+                button.innerHTML = `
+                    <i class="${meta.icon}"></i>
+                    <span>${meta.name}</span>
+                    <span class="ml-1 px-1.5 py-0.5 text-[11px] font-semibold rounded-full font-en ${catKey === currentTab ? 'bg-white/20 text-white' : 'bg-slate-200/70 text-slate-600'}">
+                        ${count}
+                    </span>
+                `;
+
+                button.addEventListener('click', () => {
+                    if (currentTab !== catKey) {
+                        currentTab = catKey;
+                        renderTabs();
+                        renderSongs();
+                    }
+                });
+
+                tabsContainer.appendChild(button);
+            });
+        }
+
+        // 曲カードのHTML生成（1曲分）
+        function createSongCardHtml(songTitle, categoryName, index) {
+            const meta = categoryMeta[categoryName];
+            
+            if (viewMode === 'grid') {
+                return `
+                    <div class="song-card bg-white rounded-xl p-4 border border-slate-200/80 border-l-4 ${meta.accentColor} shadow-sm flex flex-col justify-between group relative overflow-hidden fade-in">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${meta.tagBg}">
+                                    <i class="${meta.icon} text-[10px]"></i>
+                                    ${categoryName}
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-en font-medium">#${String(index + 1).padStart(2, '0')}</span>
+                            </div>
+                            <h3 class="text-slate-800 font-bold text-sm sm:text-base leading-snug group-hover:text-brand-600 transition-colors my-1">
+                                ${songTitle}
+                            </h3>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span class="text-[11px] text-slate-400 flex items-center gap-1">
+                                <i class="fa-solid fa-music text-[10px]"></i> 吹奏楽譜
+                            </span>
+                            <button onclick="copyToClipboard('${songTitle.replace(/'/g, "\\'")}') text-slate-400 hover:text-brand-600 transition-colors p-1" title="曲名をコピー">
+                                <i class="fa-regular fa-copy text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // リスト表示
+                return `
+                    <div class="song-card bg-white rounded-lg p-3 sm:p-3.5 border border-slate-200/80 border-l-4 ${meta.accentColor} shadow-sm flex items-center justify-between gap-4 hover:border-slate-300 transition-all fade-in">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="text-xs text-slate-400 font-en font-bold w-6 text-right shrink-0">${index + 1}</span>
+                            <div class="min-w-0">
+                                <h3 class="text-slate-800 font-bold text-sm sm:text-base truncate group-hover:text-brand-600">
+                                    ${songTitle}
+                                </h3>
+                                <div class="mt-0.5 sm:hidden">
+                                    <span class="inline-block text-[10px] font-semibold text-slate-500">
+                                        ${categoryName}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${meta.tagBg}">
+                                <i class="${meta.icon} text-[10px]"></i>
+                                ${categoryName}
+                            </span>
+                            <button onclick="copyToClipboard('${songTitle.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-brand-600 p-1.5 rounded-md hover:bg-slate-50 transition-colors" title="曲名をコピー">
+                                <i class="fa-regular fa-copy text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 楽曲リストのレンダリング
+        function renderSongs() {
+            songsContainer.innerHTML = '';
+            let totalMatchCount = 0;
+
+            const query = searchQuery.trim().toLowerCase();
+
+            // 「すべて表示」の場合、カテゴリごとにセクション化して表示するか、フラットに表示するか
+            if (currentTab === "ALL") {
+                let sectionsHtml = '';
+
+                Object.keys(rawMusicData).forEach(catName => {
+                    const songsList = rawMusicData[catName];
+                    const meta = categoryMeta[catName];
+
+                    // 検索フィルタリング
+                    const filteredSongs = songsList.filter(song => 
+                        query === "" || song.toLowerCase().includes(query)
+                    );
+
+                    if (filteredSongs.length > 0) {
+                        totalMatchCount += filteredSongs.length;
+
+                        const cardsHtml = filteredSongs.map((song, idx) => 
+                            createSongCardHtml(song, catName, idx)
+                        ).join('');
+
+                        const layoutClass = viewMode === 'grid' 
+                            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4' 
+                            : 'space-y-2';
+
+                        sectionsHtml += `
+                            <section class="mb-10">
+                                <div class="flex items-center gap-2.5 mb-4 pb-2 border-b border-slate-200">
+                                    <div class="w-8 h-8 rounded-lg ${meta.tagBg} flex items-center justify-center text-sm shadow-sm">
+                                        <i class="${meta.icon}"></i>
+                                    </div>
+                                    <h2 class="text-lg font-bold text-slate-800">
+                                        ${catName}
+                                    </h2>
+                                    <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-en font-semibold">
+                                        ${filteredSongs.length}
+                                    </span>
+                                </div>
+                                <div class="${layoutClass}">
+                                    ${cardsHtml}
+                                </div>
+                            </section>
+                        `;
+                    }
+                });
+
+                songsContainer.innerHTML = sectionsHtml;
+
+            } else {
+                // 特定カテゴリのみ表示
+                const songsList = rawMusicData[currentTab] || [];
+                const filteredSongs = songsList.filter(song => 
+                    query === "" || song.toLowerCase().includes(query)
+                );
+
+                totalMatchCount = filteredSongs.length;
+
+                if (filteredSongs.length > 0) {
+                    const cardsHtml = filteredSongs.map((song, idx) => 
+                        createSongCardHtml(song, currentTab, idx)
+                    ).join('');
+
+                    const layoutClass = viewMode === 'grid' 
+                        ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4' 
+                        : 'space-y-2';
+
+                    songsContainer.innerHTML = `
+                        <div class="${layoutClass}">
+                            ${cardsHtml}
+                        </div>
+                    `;
+                }
+            }
+
+            // 件数更新 & 0件時表示制御
+            displayedCount.textContent = totalMatchCount;
+
+            if (totalMatchCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+        }
+
+        // イベントリスナーの登録
+        function setupEventListeners() {
+            // 検索入力イベント
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                if (searchQuery.length > 0) {
+                    clearSearchBtn.classList.remove('hidden');
+                } else {
+                    clearSearchBtn.classList.add('hidden');
+                }
+                renderSongs();
+            });
+
+            // 検索クリアボタン
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchQuery = '';
+                clearSearchBtn.classList.add('hidden');
+                searchInput.focus();
+                renderSongs();
+            });
+
+            // フィルターリセットボタン
+            resetFilterBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchQuery = '';
+                clearSearchBtn.classList.add('hidden');
+                currentTab = 'ALL';
+                renderTabs();
+                renderSongs();
+            });
+
+            // グリッド/リスト切替
+            viewGridBtn.addEventListener('click', () => {
+                if (viewMode !== 'grid') {
+                    viewMode = 'grid';
+                    viewGridBtn.className = "p-1.5 rounded text-slate-700 bg-slate-100 transition-colors";
+                    viewListBtn.className = "p-1.5 rounded text-slate-400 hover:bg-slate-100 transition-colors";
+                    renderSongs();
+                }
+            });
+
+            viewListBtn.addEventListener('click', () => {
+                if (viewMode !== 'list') {
+                    viewMode = 'list';
+                    viewListBtn.className = "p-1.5 rounded text-slate-700 bg-slate-100 transition-colors";
+                    viewGridBtn.className = "p-1.5 rounded text-slate-400 hover:bg-slate-100 transition-colors";
+                    renderSongs();
+                }
+            });
+        }
+
+        // 初期化実行
+        window.addEventListener('DOMContentLoaded', () => {
+            totalCountBadge.textContent = getTotalSongsCount();
+            renderTabs();
+            renderSongs();
+            setupEventListeners();
+        });
+    </script>
+</body>
+</html>
