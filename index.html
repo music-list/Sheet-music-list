@@ -157,15 +157,28 @@
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-100/80 p-3 sm:p-4 rounded-xl border border-slate-200">
                 <!-- 検索入力 ＋ タグフィルター表示バッジ -->
                 <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto flex-grow max-w-xl">
-                    <div class="relative w-full sm:w-72">
+                    <div class="relative w-full sm:w-80">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                             <i class="fa-solid fa-magnifying-glass text-sm"></i>
                         </div>
-                        <input type="text" id="search-input" placeholder="曲名やタグで検索..." 
+                        <input type="text" id="search-input" placeholder="曲名や #タグ で検索..." 
                             class="w-full pl-10 pr-9 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all">
                         <button id="clear-search" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
                             <i class="fa-solid fa-circle-xmark text-sm"></i>
                         </button>
+
+                        <!-- #タグ入力時の候補サジェストドロップダウン -->
+                        <div id="tag-dropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-3 max-h-60 overflow-y-auto fade-in">
+                            <div class="text-[11px] font-bold text-slate-400 mb-2 flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                <span class="flex items-center gap-1 text-slate-600">
+                                    <i class="fa-solid fa-tags text-brand-500"></i> タグ候補を選択
+                                </span>
+                                <span id="tag-count-label" class="text-[10px] text-slate-400 font-en">0件</span>
+                            </div>
+                            <div id="tag-suggestions-list" class="flex flex-wrap gap-1.5">
+                                <!-- JSで動的生成 -->
+                            </div>
+                        </div>
                     </div>
 
                     <!-- アクティブタグのバッジ表示（タグ選択時） -->
@@ -405,6 +418,66 @@
         // 総曲数の計算
         function getTotalSongsCount() {
             return Object.values(rawMusicData).reduce((acc, list) => acc + list.length, 0);
+        }
+
+        // 全タグのユニークリスト取得
+        function getAllUniqueTags() {
+            const tagSet = new Set();
+            Object.values(rawMusicData).forEach(songs => {
+                songs.forEach(song => {
+                    if (song.tags) {
+                        song.tags.forEach(t => tagSet.add(t));
+                    }
+                });
+            });
+            return Array.from(tagSet).sort();
+        }
+
+        // タグ候補ドロップダウンの更新・表示制御
+        function updateTagDropdown() {
+            const inputVal = searchInput.value;
+            const tagDropdown = document.getElementById('tag-dropdown');
+            const tagList = document.getElementById('tag-suggestions-list');
+            const tagCountLabel = document.getElementById('tag-count-label');
+
+            if (!tagDropdown || !tagList) return;
+
+            // 全角「＃」も半角「#」に統一して判定
+            const normalizedVal = inputVal.replace(/＃/g, '#');
+            const hashIndex = normalizedVal.indexOf('#');
+
+            if (hashIndex !== -1) {
+                // '#' 以降の検索クエリを取得
+                const query = normalizedVal.substring(hashIndex + 1).trim().toLowerCase();
+                const allTags = getAllUniqueTags();
+                const filteredTags = allTags.filter(t => t.toLowerCase().includes(query));
+
+                if (filteredTags.length > 0) {
+                    tagCountLabel.textContent = `${filteredTags.length}件`;
+                    tagList.innerHTML = filteredTags.map(tag => `
+                        <button type="button" onclick="handleTagDropdownSelect('${tag.replace(/'/g, "\\'")}')" 
+                            class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-600 hover:text-white text-slate-700 transition-colors border border-slate-200/80 font-medium cursor-pointer">
+                            <span class="opacity-60 text-[10px]">#</span>${tag}
+                        </button>
+                    `).join('');
+                } else {
+                    tagCountLabel.textContent = '0件';
+                    tagList.innerHTML = `<span class="text-xs text-slate-400 py-1 w-full text-center">一致するタグが見つかりません</span>`;
+                }
+                tagDropdown.classList.remove('hidden');
+            } else {
+                tagDropdown.classList.add('hidden');
+            }
+        }
+
+        // ドロップダウンでタグを選択した際の処理
+        function handleTagDropdownSelect(tagName) {
+            selectTag(tagName);
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.classList.add('hidden');
+            const tagDropdown = document.getElementById('tag-dropdown');
+            if (tagDropdown) tagDropdown.classList.add('hidden');
         }
 
         // コピー用トースト通知表示
@@ -691,7 +764,22 @@
                 } else {
                     clearSearchBtn.classList.add('hidden');
                 }
+                updateTagDropdown();
                 renderSongs();
+            });
+
+            // フォーカス時にも # があればドロップダウンを表示
+            searchInput.addEventListener('focus', () => {
+                updateTagDropdown();
+            });
+
+            // ドロップダウン外をクリックした時にドロップダウンを閉じる
+            document.addEventListener('click', (e) => {
+                const tagDropdown = document.getElementById('tag-dropdown');
+                const searchWrapper = searchInput.closest('.relative');
+                if (tagDropdown && searchWrapper && !searchWrapper.contains(e.target)) {
+                    tagDropdown.classList.add('hidden');
+                }
             });
 
             // 検索クリアボタン
@@ -699,6 +787,8 @@
                 searchInput.value = '';
                 searchQuery = '';
                 clearSearchBtn.classList.add('hidden');
+                const tagDropdown = document.getElementById('tag-dropdown');
+                if (tagDropdown) tagDropdown.classList.add('hidden');
                 searchInput.focus();
                 renderSongs();
             });
